@@ -4,16 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-04-28",
   "workers_dev": true,
-  "vars": {
-    "USAGE_ANALYTICS_DATASET": "usage_events_by_token"
-  },
-  "secrets": {
-    "required": [
-      "ADMIN_TOKEN",
-      "CF_API_TOKEN",
-      "CF_ACCOUNT_ID"
-    ]
-  },
+  "vars": {},
   "assets": {
     "directory": "./public",
     "not_found_handling": "single-page-application",
@@ -25,12 +16,6 @@
       "binding": "DB",
       "database_name": "one-api-workers",
       "database_id": "61d9f5a5-9e4c-478d-a32a-0efe6e4638c4"
-    }
-  ],
-  "analytics_engine_datasets": [
-    {
-      "binding": "one-api-workers",
-      "dataset": "usage_events_by_token"
     }
   ]
 }

@@ -35,23 +35,22 @@
 
 ### 一键部署：
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Tokinx/one-api-workers)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/chrimast/one-api-workers)
+
+如果 Cloudflare 向导提示项目名称错误或返回 HTTP 400，请先在向导里把默认的 Worker/项目名改成你账号下唯一的名称，例如 `one-api-workers-keles`。Cloudflare 会读取 `wrangler.jsonc` 里的默认 `name` 和 D1 `database_name`，当前模板默认值都是 `one-api-workers`；如果你的账号里已经有同名 Worker、Pages 项目或 D1 数据库，创建阶段会失败。
 
 
 ### 手动部署
 
 ```bash
 创建 D1 数据库，获取数据库 Name、ID
-启用 Analytics Engine 并创建一张数据集，获取数据集 Name
-将上述数据更新入 wrangler.jsonc
-
-# 设置生产 Secret
-wrangler secret put ADMIN_TOKEN
-wrangler secret put CF_API_TOKEN
-wrangler secret put CF_ACCOUNT_ID
+将上述数据更新入 wrangler.jsonc，并把 name / d1_databases[].database_name 改成你账号下唯一的名称
 
 # 发布 Worker
 bun run deploy
+
+# 首次部署成功后再设置管理员 Secret
+wrangler secret put ADMIN_TOKEN
 ```
 
 ### 管理后台
@@ -110,23 +109,42 @@ bun install
 当前仓库里的 `wrangler.jsonc` / `wrangler.local.jsonc` 已经包含运行所需绑定结构，但你需要替换成自己的环境信息：
 
 - `d1_databases[].database_name` / `database_id`：替换为自己的 D1
-- `analytics_engine_datasets[].dataset`：默认使用 `usage_events_by_token`
+- `analytics_engine_datasets[].dataset`：可选，默认一键部署配置未启用；需要用量分析时手动创建 Analytics Engine 数据集后再添加绑定
 - `vars.FRONTEND_DEV_SERVER_URL`：仅本地联调时使用，默认 `http://127.0.0.1:5173`
 - `assets`：保持 `public/` 与 `ASSETS` 绑定即可
 
+如果需要启用用量分析，可以在 Cloudflare 创建 Analytics Engine 数据集后，把下面配置加回 `wrangler.jsonc`：
+
+```jsonc
+"vars": {
+  "USAGE_ANALYTICS_DATASET": "usage_events_by_token"
+},
+"analytics_engine_datasets": [
+  {
+    "binding": "USAGE_ANALYTICS",
+    "dataset": "usage_events_by_token"
+  }
+]
+```
+
 当前配置中的关键 secrets：
 
-- `ADMIN_TOKEN`：管理员登录令牌，必需
-- `CF_API_TOKEN`：用于查询 Analytics Engine SQL，支持后台分析看板和用量日志
-- `CF_ACCOUNT_ID`：与 `CF_API_TOKEN` 配套，用于 Cloudflare Analytics 查询
+- `ADMIN_TOKEN`：管理员登录令牌，首次部署成功后设置
+- `CF_API_TOKEN`：可选，用于查询 Analytics Engine SQL，启用后台分析看板和用量日志时再设置
+- `CF_ACCOUNT_ID`：可选，与 `CF_API_TOKEN` 配套，用于 Cloudflare Analytics 查询
 
 示例：
 
 ```bash
+# 必需：后台登录
 wrangler secret put ADMIN_TOKEN
+
+# 可选：启用用量分析后再设置
 wrangler secret put CF_API_TOKEN
 wrangler secret put CF_ACCOUNT_ID
 ```
+
+首次远程构建部署时不要在 `wrangler.jsonc` 中配置 `secrets.required`，否则 Cloudflare Builds 会在项目创建前检查远程 Secret 并失败。部署完成后可以在 Cloudflare 控制台的 Worker 设置里添加 Secret，或在本机登录 Wrangler 后执行上面的命令。
 
 本地开发可以用 `.dev.vars` 提供这些值；`tests/` 下的脚本也会优先读取这个文件。
 
