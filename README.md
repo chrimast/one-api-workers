@@ -199,3 +199,22 @@ MIT License
 ## 支持
 
 如有问题或建议，请创建 Issue 或联系维护者。
+
+## GitHub Actions 部署
+
+本项目使用 GitHub Actions 构建并部署到 Cloudflare Workers，不依赖 Cloudflare Workers Builds 的失效 Build Token。
+
+在 GitHub 仓库 `Settings → Secrets and variables → Actions` 中添加以下 Repository secrets：
+
+- `CLOUDFLARE_API_TOKEN`：Cloudflare 用户 API Token，至少需要 Workers Scripts Edit；如果部署涉及 D1，请同时授予 D1 Edit。
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare Account ID。
+
+配置完成后，推送到 `main` 会自动执行：
+
+```text
+安装 Bun 1.3.11 → 安装依赖 → 构建前端 → Wrangler 部署
+```
+
+也可以在仓库的 `Actions → Deploy to Cloudflare Workers → Run workflow` 中手动重新部署。
+
+原有 Cloudflare Workers Builds 可以关闭或断开，避免与 GitHub Actions 重复部署。
