@@ -2,9 +2,10 @@ import { Context } from "hono";
 import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { getApiKeyFromHeaders, fetchTokenData, fetchChannelsForToken } from "./shared/auth";
-import { getChannelModels } from "../utils";
+import { getChannelModels, getJsonSetting } from "../utils";
 import { normalizeChannelConfig } from "../channel-config";
 import { TokenUtils } from "../admin/token_utils";
+import { CONSTANTS } from "../constants";
 
 export class ModelsEndpoint extends OpenAPIRoute {
     schema = {
@@ -58,14 +59,26 @@ export class ModelsEndpoint extends OpenAPIRoute {
 
         const modelsSet = new Set<string>();
         const hasRemainingQuota = TokenUtils.hasRemainingQuota(tokenInfo.tokenData.total_quota, tokenInfo.usage);
+        // 一次性读取全局定价，避免循环内对每个模型重复查询
+        const globalPricing = hasRemainingQuota
+            ? null
+            : await getJsonSetting<Record<string, ModelPricing>>(c, CONSTANTS.MODEL_PRICING_KEY);
 
         for (const row of channelsResult.results) {
-            const config = normalizeChannelConfig(JSON.parse(row.value) as ChannelConfig);
+            let config: ChannelConfig;
+
+            try {
+                config = normalizeChannelConfig(JSON.parse(row.value) as ChannelConfig);
+            } catch (error) {
+                console.error(`Invalid channel config for key: ${row.key}`, error);
+                continue;
+            }
+
             if (!config.enabled) {
                 continue;
             }
             for (const model of getChannelModels(config)) {
-                if (!hasRemainingQuota && await TokenUtils.modelRequiresPaidQuota(c, model.name, config)) {
+                if (!hasRemainingQuota && await TokenUtils.modelRequiresPaidQuota(c, model.name, config, globalPricing)) {
                     continue;
                 }
                 modelsSet.add(model.name);
