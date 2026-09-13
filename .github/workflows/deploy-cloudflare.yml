@@ -35,6 +35,17 @@ jobs:
       - name: Build frontend
         run: bun run build
 
+      - name: Set administrator secret
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$ADMIN_TOKEN"
+          printf '%s' "$ADMIN_TOKEN" | bunx wrangler secret put ADMIN_TOKEN --config wrangler.jsonc
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
