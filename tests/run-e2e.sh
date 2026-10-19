@@ -1,6 +1,6 @@
 #!/bin/bash
 # E2E tests against mock upstream
-# Prerequisites: mock-upstream running on :9999, wrangler dev on :8788
+# Prerequisites: mock-upstream running on :9999, wrangler dev on :8787
 
 API="${API:-http://localhost:8787}"
 MOCK_API="${MOCK_API:-http://localhost:9999}"
@@ -274,10 +274,13 @@ assert_http "azure responses stream → 200 + SSE" "200" "event:" "$R"
 echo ""
 echo "--- Quota check ---"
 
+# Paid-model gating only applies when pricing exists; seed gpt-4o as paid for this check.
+"${DB_EXEC[@]}" "INSERT OR REPLACE INTO settings (key, value) VALUES ('MODEL_PRICING_CONFIG', '{\"gpt-4o\":{\"input\":1,\"output\":1}}')" > /dev/null 2>&1
 "${DB_EXEC[@]}" "UPDATE api_token SET usage = 99999999 WHERE key = 'sk-mock-all'" > /dev/null 2>&1
 R=$(do_post -H "Authorization: Bearer sk-mock-all" "$API/v1/chat/completions" -H "Content-Type: application/json" -d '{"model":"gpt-4o","messages":[]}')
 assert_http "quota exceeded → 402" "402" "Quota exceeded" "$R"
 "${DB_EXEC[@]}" "UPDATE api_token SET usage = 0 WHERE key = 'sk-mock-all'" > /dev/null 2>&1
+"${DB_EXEC[@]}" "DELETE FROM settings WHERE key = 'MODEL_PRICING_CONFIG'" > /dev/null 2>&1
 
 # ---- Admin cookie session ----
 echo ""
